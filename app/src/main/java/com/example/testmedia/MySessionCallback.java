@@ -43,7 +43,7 @@ public class MySessionCallback extends MediaSessionCompat.Callback {
 
         if(result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED){
             //start the service
-            mContext.startService(new Intent(mContext,MediaBrowserService.class));
+            mContext.startService(new Intent(mContext, MusicService.class));
             //set the session active (and update metadata and state)
             mediaSessionCompat.setActive(true);
             //start the player (custom call)

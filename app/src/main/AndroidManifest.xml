@@ -10,7 +10,7 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
         <service
-            android:name=".MediaBrowserService"
+            android:name=".MusicService"
             android:enabled="true"
             android:exported="true">
             <intent-filter>
