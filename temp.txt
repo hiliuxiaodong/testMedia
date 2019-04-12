@@ -1,0 +1,69 @@
+// initialization of the audio attributes and focus request
+ mAudioManager = (AudioManager) Context.getSystemService(Context.AUDIO_SERVICE);
+ mPlaybackAttributes = new AudioAttributes.Builder()
+         .setUsage(AudioAttributes.USAGE_MEDIA)
+         .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+         .build();
+ mFocusRequest = new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
+         .setAudioAttributes(mPlaybackAttributes)
+         .setAcceptsDelayedFocusGain(true)
+         .setWillPauseWhenDucked(true)
+         .setOnAudioFocusChangeListener(this, mMyHandler)
+         .build();
+ mMediaPlayer = new MediaPlayer();
+ mMediaPlayer.setAudioAttributes(mPlaybackAttributes);
+ final Object mFocusLock = new Object();
+
+ boolean mPlaybackDelayed = false;
+
+ // requesting audio focus
+ int res = mAudioManager.requestAudioFocus(mFocusRequest);
+ synchronized (mFocusLock) {
+     if (res == AudioManager.AUDIOFOCUS_REQUEST_FAILED) {
+         mPlaybackDelayed = false;
+     } else if (res == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
+         mPlaybackDelayed = false;
+         playbackNow();
+     } else if (res == AudioManager.AUDIOFOCUS_REQUEST_DELAYED) {
+        mPlaybackDelayed = true;
+     }
+ }
+
+ // implementation of the OnAudioFocusChangeListener
+ @Override
+ public void onAudioFocusChange(int focusChange) {
+     switch (focusChange) {
+         case AudioManager.AUDIOFOCUS_GAIN:
+             if (mPlaybackDelayed || mResumeOnFocusGain) {
+                 synchronized (mFocusLock) {
+                     mPlaybackDelayed = false;
+                     mResumeOnFocusGain = false;
+                 }
+                 playbackNow();
+             }
+             break;
+         case AudioManager.AUDIOFOCUS_LOSS:
+             synchronized (mFocusLock) {
+                 // this is not a transient loss, we shouldn't automatically resume for now
+                 mResumeOnFocusGain = false;
+                 mPlaybackDelayed = false;
+             }
+             pausePlayback();
+             break;
+         case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT:
+         case AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK:
+             // we handle all transient losses the same way because we never duck audio books
+             synchronized (mFocusLock) {
+                 // we should only resume if playback was interrupted
+                 mResumeOnFocusGain = mMediaPlayer.isPlaying();
+                 mPlaybackDelayed = false;
+             }
+             pausePlayback();
+             break;
+     }
+ }
+
+ // Important:
+ // Also set "mResumeOnFocusGain" to false when the user pauses or stops playback: this way your
+ // application doesn't automatically restart when it gains focus, even though the user had
+ // stopped it.

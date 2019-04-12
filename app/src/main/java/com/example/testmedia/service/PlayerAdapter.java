@@ -16,6 +16,7 @@ public abstract class PlayerAdapter {
             new IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY);
 
     private boolean mAudioNoisyReceiverRegistered = false;
+    private boolean mPlayOnAudioFocus;
     private final BroadcastReceiver mAudioNoisyReceiver =
             new BroadcastReceiver() {
                 @Override
@@ -39,21 +40,63 @@ public abstract class PlayerAdapter {
     }
 
 
+    protected abstract void onPlay();
+    protected abstract void onPause();
+    protected abstract void onStop();
+
+    public final void play(){
+        if(mAudioFocusHelper.requestAudioFocus()){
+            registerAudioReceiver();
+            onPlay();
+        }
+    }
+
+    public final void pause(){
+        if(!mPlayOnAudioFocus){
+            mAudioFocusHelper.abandonAudioFocus();
+        }
+        unRegisterAudioReceiver();
+        onPause();
+    }
+
+    public final void stop(){
+        mAudioFocusHelper.abandonAudioFocus();
+        unRegisterAudioReceiver();
+        onStop();
+    }
+
+    public abstract void seekTo(int position);
+    public abstract void setVolume(int volume);
+
+    private void registerAudioReceiver(){
+        if(!mAudioNoisyReceiverRegistered){
+            mApplicationContext.registerReceiver(mAudioNoisyReceiver,AUDIO_NOISY_INTENT_FILTER);
+            mAudioNoisyReceiverRegistered = true;
+        }
+    }
+    private void unRegisterAudioReceiver(){
+        if(mAudioNoisyReceiverRegistered){
+            mApplicationContext.unregisterReceiver(mAudioNoisyReceiver);
+            mAudioNoisyReceiverRegistered = false;
+        }
+    }
+
     /**
      * Helper class for managing audio focus related tasks.
      */
-    private final class AudioFocusHelper
-            implements AudioManager.OnAudioFocusChangeListener {
+    private final class AudioFocusHelper implements AudioManager.OnAudioFocusChangeListener {
+
+        public AudioFocusRequest focusRequest = new AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
+                .setOnAudioFocusChangeListener(this)
+                .build();
 
         private boolean requestAudioFocus() {
-            final int result = mAudioManager.requestAudioFocus(this,
-                    AudioManager.STREAM_MUSIC,
-                    AudioManager.AUDIOFOCUS_GAIN);
+            final int result = mAudioManager.requestAudioFocus(focusRequest);
             return result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED;
         }
 
         private void abandonAudioFocus() {
-            mAudioManager.abandonAudioFocus(this);
+            mAudioManager.abandonAudioFocusRequest(focusRequest);
         }
 
         @Override
