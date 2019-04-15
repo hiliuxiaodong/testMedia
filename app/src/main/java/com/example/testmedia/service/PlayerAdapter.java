@@ -16,7 +16,7 @@ public abstract class PlayerAdapter {
             new IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY);
 
     private boolean mAudioNoisyReceiverRegistered = false;
-    private boolean mPlayOnAudioFocus;
+    private boolean mPlayOnAudioFocus = false;
     private final BroadcastReceiver mAudioNoisyReceiver =
             new BroadcastReceiver() {
                 @Override
@@ -40,6 +40,7 @@ public abstract class PlayerAdapter {
     }
 
 
+    public abstract boolean isPlaying();
     protected abstract void onPlay();
     protected abstract void onPause();
     protected abstract void onStop();
@@ -66,7 +67,7 @@ public abstract class PlayerAdapter {
     }
 
     public abstract void seekTo(int position);
-    public abstract void setVolume(int volume);
+    public abstract void setVolume(float volume);
 
     private void registerAudioReceiver(){
         if(!mAudioNoisyReceiverRegistered){
@@ -120,7 +121,7 @@ public abstract class PlayerAdapter {
                     }
                     break;
                 case AudioManager.AUDIOFOCUS_LOSS:
-                    mAudioManager.abandonAudioFocus(this);
+                    abandonAudioFocus();
                     mPlayOnAudioFocus = false;
                     stop();
                     break;
